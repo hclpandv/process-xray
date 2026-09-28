@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <unistd.h>
+#include <sys/mman.h>
 
 typedef struct {
     unsigned long start;
@@ -55,23 +56,44 @@ int find_memory_region(
 
 int main(void)
 {
-    printf("Process X-Ray v0.3.4\n");
+    printf("Process X-Ray v0.4.1\n");
     printf("====================\n\n");
-
-    int local_variable = 42;
-
-    printf("Local variable\n");
-    printf("--------------\n");
-    printf("Value:   %d\n", local_variable);
-    printf("Address: %p\n", (void *)&local_variable);
 
     pid_t pid = getpid();
 
-    printf("\nPID: %d\n", pid);
+    printf("PID: %d\n", pid);
 
     long page_size = sysconf(_SC_PAGESIZE);
 
     printf("Page size: %ld bytes\n", page_size);
+
+    printf("\nCreating memory mapping...\n");
+
+    void *memory = mmap(
+        NULL,
+        page_size,
+        PROT_READ | PROT_WRITE,
+        MAP_PRIVATE | MAP_ANONYMOUS,
+        -1,
+        0
+    );
+
+    if (memory == MAP_FAILED) {
+        printf("mmap failed\n");
+        return 1;
+    }
+
+    printf("Mapping address: %p\n", memory);
+    printf("Mapping size:    %ld bytes\n", page_size);
+
+    int *number = memory;
+
+    *number = 42;
+
+    printf("\nMapped memory\n");
+    printf("-------------\n");
+    printf("Value:   %d\n", *number);
+    printf("Address: %p\n", (void *)number);
 
     char maps_path[64];
 
@@ -85,7 +107,7 @@ int main(void)
     MemoryRegion region;
 
     unsigned long address =
-        (unsigned long)&local_variable;
+        (unsigned long)memory;
 
     if (find_memory_region(
             maps_path,
@@ -115,49 +137,20 @@ int main(void)
             region.permissions
         );
 
-        unsigned long mapping_offset =
-            address - region.start;
-
-        printf(
-            "Offset:      0x%lx\n",
-            mapping_offset
-        );
-
-        unsigned long page_offset =
-            address % page_size;
-
-        printf(
-            "Page offset: 0x%lx\n",
-            page_offset
-        );
-
-        unsigned long page_start =
-            address - page_offset;
-
-        unsigned long page_end =
-            page_start + page_size;
-
-        printf("\nContaining page\n");
-        printf("----------------\n");
-
-        printf(
-            "Page start:  0x%lx\n",
-            page_start
-        );
-
-        printf(
-            "Page end:    0x%lx\n",
-            page_end
-        );
-
-        printf(
-            "Page size:   %ld bytes\n",
-            page_size
-        );
-
     } else {
         printf("\nCould not find containing region.\n");
     }
+
+    printf("\nPress Enter to unmap and exit...\n");
+
+    getchar();
+
+    if (munmap(memory, page_size) != 0) {
+        printf("munmap failed\n");
+        return 1;
+    }
+
+    printf("Memory mapping removed.\n");
 
     return 0;
 }
