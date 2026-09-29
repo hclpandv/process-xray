@@ -1,0 +1,2541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Linux Process Lab</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+:root {
+    --bg: #07111f;
+    --bg2: #0b1728;
+    --panel: #0d1b2d;
+    --panel2: #102239;
+    --border: #1d3853;
+    --text: #d9e7f5;
+    --muted: #8298ad;
+
+    --green: #39e58c;
+    --cyan: #42d9ff;
+    --blue: #4c8dff;
+    --yellow: #ffd166;
+    --orange: #ff9f43;
+    --red: #ff5d73;
+    --purple: #b78cff;
+
+    --shadow: 0 14px 40px rgba(0,0,0,.28);
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    margin: 0;
+    background:
+        radial-gradient(circle at 15% 10%, rgba(66,217,255,.07), transparent 28%),
+        radial-gradient(circle at 85% 20%, rgba(57,229,140,.05), transparent 25%),
+        var(--bg);
+    color: var(--text);
+    font-family: Inter, sans-serif;
+    line-height: 1.55;
+}
+
+button,
+select,
+input {
+    font: inherit;
+}
+
+button {
+    cursor: pointer;
+}
+
+code,
+pre,
+.mono {
+    font-family: "JetBrains Mono", monospace;
+}
+
+header {
+    border-bottom: 1px solid var(--border);
+    background: rgba(7,17,31,.88);
+    backdrop-filter: blur(12px);
+    position: sticky;
+    top: 0;
+    z-index: 50;
+}
+
+.header-inner {
+    max-width: 1400px;
+    margin: auto;
+    padding: 18px 28px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 13px;
+}
+
+.brand-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    display: grid;
+    place-items: center;
+    background: rgba(57,229,140,.09);
+    border: 1px solid rgba(57,229,140,.3);
+    color: var(--green);
+    font-size: 22px;
+}
+
+.brand h1 {
+    margin: 0;
+    font-size: 18px;
+}
+
+.brand p {
+    margin: 2px 0 0;
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.header-status {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+    color: var(--muted);
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 12px var(--green);
+}
+
+.container {
+    max-width: 1400px;
+    margin: auto;
+    padding: 34px 28px 70px;
+}
+
+.hero {
+    margin-bottom: 28px;
+}
+
+.hero h2 {
+    margin: 0 0 8px;
+    font-size: clamp(30px, 4vw, 48px);
+    line-height: 1.05;
+    letter-spacing: -.04em;
+}
+
+.hero h2 span {
+    color: var(--green);
+}
+
+.hero p {
+    margin: 0;
+    max-width: 850px;
+    color: var(--muted);
+    font-size: 16px;
+}
+
+.grid {
+    display: grid;
+    gap: 20px;
+}
+
+.grid-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.grid-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.card {
+    background: linear-gradient(145deg, rgba(16,34,57,.94), rgba(10,24,41,.94));
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+}
+
+.card-header {
+    padding: 17px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+
+.card-header h3 {
+    margin: 0;
+    font-size: 15px;
+}
+
+.card-body {
+    padding: 20px;
+}
+
+.badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border-radius: 999px;
+    padding: 5px 9px;
+    font-size: 11px;
+    font-family: "JetBrains Mono", monospace;
+    border: 1px solid var(--border);
+    color: var(--muted);
+}
+
+.badge.green {
+    color: var(--green);
+    border-color: rgba(57,229,140,.3);
+    background: rgba(57,229,140,.07);
+}
+
+.badge.yellow {
+    color: var(--yellow);
+    border-color: rgba(255,209,102,.3);
+    background: rgba(255,209,102,.07);
+}
+
+.badge.red {
+    color: var(--red);
+    border-color: rgba(255,93,115,.3);
+    background: rgba(255,93,115,.07);
+}
+
+/* =========================================================
+   ORIGINAL PROCESS ROTATOR
+   ========================================================= */
+
+.process-visual {
+    height: 310px;
+    display: grid;
+    place-items: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.process-orbit {
+    width: 210px;
+    height: 210px;
+    border: 1px dashed rgba(66,217,255,.25);
+    border-radius: 50%;
+    position: absolute;
+    display: grid;
+    place-items: center;
+}
+
+.process-orbit.active {
+    animation: orbitRotate 8s linear infinite;
+}
+
+.process-dot {
+    position: absolute;
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow:
+        0 0 8px rgba(57,229,140,.9),
+        0 0 18px rgba(57,229,140,.4);
+    transform:
+        rotate(var(--angle))
+        translateX(100px)
+        rotate(calc(-1 * var(--angle)));
+}
+
+.process-dot:nth-child(1)  { --angle: 0deg; }
+.process-dot:nth-child(2)  { --angle: 30deg; }
+.process-dot:nth-child(3)  { --angle: 60deg; }
+.process-dot:nth-child(4)  { --angle: 90deg; }
+.process-dot:nth-child(5)  { --angle: 120deg; }
+.process-dot:nth-child(6)  { --angle: 150deg; }
+.process-dot:nth-child(7)  { --angle: 180deg; }
+.process-dot:nth-child(8)  { --angle: 210deg; }
+.process-dot:nth-child(9)  { --angle: 240deg; }
+.process-dot:nth-child(10) { --angle: 270deg; }
+.process-dot:nth-child(11) { --angle: 300deg; }
+.process-dot:nth-child(12) { --angle: 330deg; }
+
+.process-core {
+    width: 92px;
+    height: 92px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    text-align: center;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--green);
+    border: 2px solid rgba(57,229,140,.65);
+    background:
+        radial-gradient(circle, rgba(57,229,140,.18), rgba(57,229,140,.02) 65%),
+        #091a2a;
+    box-shadow:
+        0 0 22px rgba(57,229,140,.12),
+        inset 0 0 24px rgba(57,229,140,.06);
+    z-index: 3;
+}
+
+.process-visual.sleeping .process-orbit.active {
+    animation-duration: 16s;
+}
+
+.process-visual.sleeping .process-dot {
+    opacity: .32;
+}
+
+.process-visual.ready .process-dot {
+    background: var(--yellow);
+    box-shadow:
+        0 0 8px rgba(255,209,102,.9),
+        0 0 18px rgba(255,209,102,.35);
+}
+
+.process-visual.ready .process-core {
+    color: var(--yellow);
+    border-color: rgba(255,209,102,.65);
+}
+
+.process-visual.zombie .process-orbit {
+    animation-play-state: paused !important;
+}
+
+.process-visual.zombie .process-dot {
+    background: var(--red);
+    box-shadow:
+        0 0 8px rgba(255,93,115,.8),
+        0 0 15px rgba(255,93,115,.25);
+    opacity: .5;
+}
+
+.process-visual.zombie .process-core {
+    color: var(--red);
+    border-color: rgba(255,93,115,.6);
+}
+
+.process-visual.exited .process-orbit {
+    animation-play-state: paused !important;
+    opacity: .18;
+}
+
+.process-visual.exited .process-dot {
+    opacity: .18;
+}
+
+.process-visual.exited .process-core {
+    color: var(--muted);
+    border-color: rgba(130,152,173,.35);
+}
+
+.process-visual.stopped .process-orbit {
+    animation-play-state: paused !important;
+}
+
+.process-visual.stopped .process-dot {
+    background: var(--orange);
+    box-shadow:
+        0 0 8px rgba(255,159,67,.8),
+        0 0 16px rgba(255,159,67,.25);
+}
+
+.process-visual.stopped .process-core {
+    color: var(--orange);
+    border-color: rgba(255,159,67,.6);
+}
+
+.process-visual.fork .process-dot {
+    background: var(--cyan);
+    box-shadow:
+        0 0 8px rgba(66,217,255,.9),
+        0 0 18px rgba(66,217,255,.35);
+}
+
+.process-visual.fork .process-core {
+    color: var(--cyan);
+    border-color: rgba(66,217,255,.65);
+}
+
+.process-visual.exec .process-dot {
+    background: var(--purple);
+    box-shadow:
+        0 0 8px rgba(183,140,255,.9),
+        0 0 18px rgba(183,140,255,.35);
+}
+
+.process-visual.exec .process-core {
+    color: var(--purple);
+    border-color: rgba(183,140,255,.65);
+}
+
+.process-visual.reaped .process-orbit {
+    animation-play-state: paused !important;
+    opacity: .08;
+}
+
+.process-visual.reaped .process-dot {
+    opacity: .06;
+}
+
+.process-visual.reaped .process-core {
+    color: var(--green);
+    border-color: rgba(57,229,140,.22);
+    opacity: .45;
+}
+
+@keyframes orbitRotate {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* =========================================================
+   LIFECYCLE
+   ========================================================= */
+
+.lifecycle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.lifecycle-node {
+    min-width: 94px;
+    padding: 10px 8px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: rgba(7,17,31,.55);
+    text-align: center;
+    transition: .2s ease;
+}
+
+.lifecycle-node strong {
+    display: block;
+    font-size: 11px;
+    font-family: "JetBrains Mono", monospace;
+}
+
+.lifecycle-node small {
+    display: block;
+    margin-top: 3px;
+    color: var(--muted);
+    font-size: 9px;
+}
+
+.lifecycle-node.active {
+    border-color: var(--green);
+    background: rgba(57,229,140,.08);
+    box-shadow: 0 0 18px rgba(57,229,140,.08);
+}
+
+.lifecycle-node.fork-node.active {
+    border-color: var(--cyan);
+    background: rgba(66,217,255,.08);
+}
+
+.lifecycle-node.exec-node.active {
+    border-color: var(--purple);
+    background: rgba(183,140,255,.08);
+}
+
+.lifecycle-node.ready-node.active {
+    border-color: var(--yellow);
+    background: rgba(255,209,102,.08);
+}
+
+.lifecycle-node.sleep-node.active {
+    border-color: var(--cyan);
+    background: rgba(66,217,255,.08);
+}
+
+.lifecycle-node.stop-node.active {
+    border-color: var(--orange);
+    background: rgba(255,159,67,.08);
+}
+
+.lifecycle-node.exit-node.active,
+.lifecycle-node.zombie-node.active {
+    border-color: var(--red);
+    background: rgba(255,93,115,.08);
+}
+
+.lifecycle-node.reaped-node.active {
+    border-color: var(--green);
+    background: rgba(57,229,140,.05);
+}
+
+.lifecycle-arrow {
+    color: #45647e;
+    font-size: 15px;
+}
+
+.lifecycle-note {
+    margin-top: 16px;
+    padding: 12px 14px;
+    border-left: 3px solid var(--green);
+    background: rgba(57,229,140,.045);
+    color: var(--muted);
+    font-size: 13px;
+}
+
+/* =========================================================
+   CONTROLS
+   ========================================================= */
+
+.controls {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.btn {
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    background: #0b1b2e;
+    color: var(--text);
+    padding: 8px 12px;
+    font-size: 12px;
+    transition: .18s ease;
+}
+
+.btn:hover {
+    border-color: var(--cyan);
+    background: #10263d;
+}
+
+.btn.green:hover {
+    border-color: var(--green);
+    color: var(--green);
+}
+
+.btn.yellow:hover {
+    border-color: var(--yellow);
+    color: var(--yellow);
+}
+
+.btn.orange:hover {
+    border-color: var(--orange);
+    color: var(--orange);
+}
+
+.btn.red:hover {
+    border-color: var(--red);
+    color: var(--red);
+}
+
+.btn.purple:hover {
+    border-color: var(--purple);
+    color: var(--purple);
+}
+
+.btn:disabled {
+    opacity: .35;
+    cursor: not-allowed;
+}
+
+/* =========================================================
+   PROCESS INFO
+   ========================================================= */
+
+.process-info {
+    display: grid;
+    grid-template-columns: 130px 1fr;
+    gap: 8px 18px;
+    font-size: 13px;
+}
+
+.process-info dt {
+    color: var(--muted);
+}
+
+.process-info dd {
+    margin: 0;
+    font-family: "JetBrains Mono", monospace;
+}
+
+.explanation {
+    padding: 14px;
+    border-radius: 10px;
+    background: rgba(7,17,31,.55);
+    border: 1px solid var(--border);
+}
+
+.explanation h4 {
+    margin: 0 0 7px;
+    font-size: 13px;
+}
+
+.explanation p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.explanation code {
+    color: var(--cyan);
+}
+
+/* =========================================================
+   TERMINAL
+   ========================================================= */
+
+.terminal {
+    background: #050c14;
+    border: 1px solid #17304a;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.terminal-head {
+    padding: 10px 13px;
+    background: #091522;
+    border-bottom: 1px solid #17304a;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.terminal-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+}
+
+.terminal-dot.r { background: #ff5f57; }
+.terminal-dot.y { background: #febc2e; }
+.terminal-dot.g { background: #28c840; }
+
+.terminal-body {
+    min-height: 250px;
+    padding: 15px;
+    overflow: auto;
+    color: #b8d0e4;
+    font: 12px/1.65 "JetBrains Mono", monospace;
+}
+
+.prompt {
+    color: var(--green);
+}
+
+.command {
+    color: var(--cyan);
+}
+
+.output {
+    color: #9eb4c7;
+}
+
+.cursor {
+    display: inline-block;
+    width: 7px;
+    height: 14px;
+    background: var(--green);
+    vertical-align: -2px;
+    animation: blink 1s steps(1) infinite;
+}
+
+@keyframes blink {
+    50% {
+        opacity: 0;
+    }
+}
+
+/* =========================================================
+   TABLES
+   ========================================================= */
+
+.table-wrap {
+    overflow-x: auto;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+}
+
+th,
+td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    text-align: left;
+}
+
+th {
+    color: var(--muted);
+    font-weight: 500;
+}
+
+td {
+    font-family: "JetBrains Mono", monospace;
+}
+
+.state {
+    font-weight: 600;
+}
+
+.state-running { color: var(--green); }
+.state-sleeping { color: var(--cyan); }
+.state-ready { color: var(--yellow); }
+.state-stopped { color: var(--orange); }
+.state-zombie { color: var(--red); }
+
+/* =========================================================
+   TABS
+   ========================================================= */
+
+.tabs {
+    display: flex;
+    gap: 3px;
+    overflow-x: auto;
+    border-bottom: 1px solid var(--border);
+}
+
+.tab {
+    padding: 11px 15px;
+    color: var(--muted);
+    border: 0;
+    background: transparent;
+    border-bottom: 2px solid transparent;
+    white-space: nowrap;
+}
+
+.tab:hover {
+    color: var(--text);
+}
+
+.tab.active {
+    color: var(--green);
+    border-bottom-color: var(--green);
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+/* =========================================================
+   CODE BLOCKS
+   ========================================================= */
+
+.code {
+    background: #050d16;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 15px;
+    overflow-x: auto;
+    font: 12px/1.7 "JetBrains Mono", monospace;
+    color: #b8cee0;
+}
+
+.kw { color: var(--purple); }
+.fn { color: var(--cyan); }
+.str { color: var(--green); }
+.comment { color: #58748d; }
+.num { color: var(--yellow); }
+
+/* =========================================================
+   SIGNAL PANEL
+   ========================================================= */
+
+.signal-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+}
+
+.signal-card {
+    padding: 13px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: rgba(7,17,31,.45);
+}
+
+.signal-card strong {
+    display: block;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 12px;
+    color: var(--orange);
+}
+
+.signal-card span {
+    display: block;
+    margin-top: 5px;
+    color: var(--muted);
+    font-size: 11px;
+}
+
+/* =========================================================
+   MEMORY
+   ========================================================= */
+
+.memory-map {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+
+.memory-row {
+    display: grid;
+    grid-template-columns: 100px 1fr 80px;
+    gap: 10px;
+    align-items: center;
+}
+
+.memory-label {
+    color: var(--muted);
+    font: 10px "JetBrains Mono", monospace;
+}
+
+.memory-bar {
+    height: 25px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    background: #07111d;
+}
+
+.memory-fill {
+    height: 100%;
+    display: flex;
+    align-items: center;
+    padding-left: 8px;
+    font: 10px "JetBrains Mono", monospace;
+}
+
+.memory-size {
+    color: var(--muted);
+    font: 10px "JetBrains Mono", monospace;
+    text-align: right;
+}
+
+/* =========================================================
+   SCHEDULER
+   ========================================================= */
+
+.scheduler {
+    display: grid;
+    gap: 8px;
+}
+
+.cpu {
+    padding: 13px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: rgba(7,17,31,.4);
+}
+
+.cpu-head {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+
+.cpu-head strong {
+    font-size: 12px;
+}
+
+.cpu-head span {
+    color: var(--green);
+    font: 11px "JetBrains Mono", monospace;
+}
+
+.cpu-track {
+    height: 11px;
+    border-radius: 999px;
+    background: #07111d;
+    overflow: hidden;
+}
+
+.cpu-fill {
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, var(--green), var(--cyan));
+    animation: cpuPulse 2.5s ease-in-out infinite alternate;
+}
+
+@keyframes cpuPulse {
+    from { width: 34%; }
+    to   { width: 79%; }
+}
+
+/* =========================================================
+   FOOTER
+   ========================================================= */
+
+footer {
+    margin-top: 50px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 11px;
+    text-align: center;
+}
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 1000px) {
+    .grid-2,
+    .grid-3 {
+        grid-template-columns: 1fr;
+    }
+
+    .signal-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 700px) {
+    .header-inner,
+    .container {
+        padding-left: 16px;
+        padding-right: 16px;
+    }
+
+    .process-info {
+        grid-template-columns: 1fr;
+        gap: 3px;
+    }
+
+    .lifecycle {
+        justify-content: center;
+    }
+
+    .lifecycle-arrow {
+        display: none;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<header>
+    <div class="header-inner">
+        <div class="brand">
+            <div class="brand-icon">⌁</div>
+            <div>
+                <h1>Linux Process Lab</h1>
+                <p>Processes • Scheduling • Signals • Memory • Syscalls</p>
+            </div>
+        </div>
+
+        <div class="header-status">
+            <span class="status-dot"></span>
+            simulated kernel environment
+        </div>
+    </div>
+</header>
+
+<main class="container">
+
+<section class="hero">
+    <h2>Inside a Linux <span>Process</span></h2>
+    <p>
+        Explore how a process is created, loaded, scheduled, blocked,
+        stopped, terminated, becomes a zombie, and is finally reaped.
+        Everything in this lab is simulated so you can experiment safely.
+    </p>
+</section>
+
+<!-- PROCESS VISUAL -->
+<section class="card">
+    <div class="card-header">
+        <h3>Process State Visualizer</h3>
+        <span class="badge green" id="stateBadge">READY</span>
+    </div>
+
+    <div class="card-body">
+
+        <div class="process-visual ready" id="processVisual">
+            <div class="process-orbit" id="processOrbit">
+                <div class="process-dot"></div>
+                <div class="process-dot"></div>
+                <div class="process-dot"></div>
+                <div class="process-dot"></div>
+                <div class="process-dot"></div>
+                <div class="process-dot"></div>
+                <div class="process-dot"></div>
+                <div class="process-dot"></div>
+                <div class="process-dot"></div>
+                <div class="process-dot"></div>
+                <div class="process-dot"></div>
+                <div class="process-dot"></div>
+            </div>
+
+            <div class="process-core" id="processCore">
+                READY
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="btn green" onclick="runProcess()">Start</button>
+            <button class="btn" onclick="setState('SLEEPING')">Sleep</button>
+            <button class="btn yellow" onclick="setState('READY')">Ready</button>
+            <button class="btn orange" onclick="stopProcess()">SIGSTOP</button>
+            <button class="btn green" onclick="continueProcess()">SIGCONT</button>
+            <button class="btn red" onclick="exitProcess()">exit()</button>
+            <button class="btn red" onclick="makeZombie()">Zombie</button>
+            <button class="btn green" onclick="reapProcess()">waitpid()</button>
+        </div>
+    </div>
+</section>
+
+<br>
+
+<!-- LIFECYCLE -->
+<section class="card">
+    <div class="card-header">
+        <h3>Complete Linux Process Lifecycle</h3>
+        <span class="badge">conceptual model</span>
+    </div>
+
+    <div class="card-body">
+
+        <div class="lifecycle" id="lifecycle">
+
+            <div class="lifecycle-node" data-state="NEW">
+                <strong>NEW</strong>
+                <small>not started</small>
+            </div>
+
+            <span class="lifecycle-arrow">→</span>
+
+            <div class="lifecycle-node fork-node" data-state="FORK">
+                <strong>FORK</strong>
+                <small>clone process</small>
+            </div>
+
+            <span class="lifecycle-arrow">→</span>
+
+            <div class="lifecycle-node exec-node" data-state="EXEC">
+                <strong>EXEC</strong>
+                <small>load program</small>
+            </div>
+
+            <span class="lifecycle-arrow">→</span>
+
+            <div class="lifecycle-node ready-node" data-state="READY">
+                <strong>READY</strong>
+                <small>runnable</small>
+            </div>
+
+            <span class="lifecycle-arrow">→</span>
+
+            <div class="lifecycle-node" data-state="RUNNING">
+                <strong>RUNNING</strong>
+                <small>on CPU</small>
+            </div>
+
+            <span class="lifecycle-arrow">↔</span>
+
+            <div class="lifecycle-node sleep-node" data-state="SLEEPING">
+                <strong>SLEEPING</strong>
+                <small>waiting</small>
+            </div>
+
+            <span class="lifecycle-arrow">↔</span>
+
+            <div class="lifecycle-node stop-node" data-state="STOPPED">
+                <strong>STOPPED</strong>
+                <small>SIGSTOP</small>
+            </div>
+
+            <span class="lifecycle-arrow">→</span>
+
+            <div class="lifecycle-node exit-node" data-state="EXITED">
+                <strong>EXITED</strong>
+                <small>finished</small>
+            </div>
+
+            <span class="lifecycle-arrow">→</span>
+
+            <div class="lifecycle-node zombie-node" data-state="ZOMBIE">
+                <strong>ZOMBIE</strong>
+                <small>not reaped</small>
+            </div>
+
+            <span class="lifecycle-arrow">→</span>
+
+            <div class="lifecycle-node reaped-node" data-state="REAPED">
+                <strong>REAPED</strong>
+                <small>wait() done</small>
+            </div>
+        </div>
+
+        <div class="lifecycle-note" id="lifecycleNote">
+            A normal process starts as runnable work, receives CPU time,
+            may sleep while waiting for an event, and eventually exits.
+            If its parent has not collected its exit status, the terminated
+            process remains as a zombie until <code>wait()</code> or
+            <code>waitpid()</code> reaps it.
+        </div>
+    </div>
+</section>
+
+<br>
+
+<!-- PROCESS DETAILS -->
+<section class="grid grid-2">
+
+    <div class="card">
+        <div class="card-header">
+            <h3>Current Process</h3>
+            <span class="badge" id="pidBadge">PID 4242</span>
+        </div>
+
+        <div class="card-body">
+            <dl class="process-info">
+                <dt>PID</dt>
+                <dd>4242</dd>
+
+                <dt>PPID</dt>
+                <dd>4100</dd>
+
+                <dt>State</dt>
+                <dd id="detailState">R — Runnable</dd>
+
+                <dt>Priority</dt>
+                <dd>20</dd>
+
+                <dt>Nice</dt>
+                <dd>0</dd>
+
+                <dt>CPU</dt>
+                <dd>CPU 2</dd>
+
+                <dt>Threads</dt>
+                <dd>4</dd>
+
+                <dt>Memory</dt>
+                <dd>18.7 MiB</dd>
+            </dl>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h3>What Does This State Mean?</h3>
+        </div>
+
+        <div class="card-body">
+            <div class="explanation">
+                <h4 id="explanationTitle">READY</h4>
+                <p id="explanationText">
+                    The process is runnable and eligible for CPU time,
+                    but another task may currently be using the CPU.
+                </p>
+            </div>
+        </div>
+    </div>
+
+</section>
+
+<br>
+
+<!-- FORK / EXEC -->
+<section class="grid grid-2">
+
+    <div class="card">
+        <div class="card-header">
+            <h3>fork() — Create a Process</h3>
+            <span class="badge green">PROCESS CREATION</span>
+        </div>
+
+        <div class="card-body">
+
+            <p style="color:var(--muted);font-size:13px">
+                <code>fork()</code> creates a new process by duplicating
+                the calling process. The parent receives the child's PID,
+                while the child receives <code>0</code> as the return value.
+            </p>
+
+            <div class="code">
+<span class="kw">pid_t</span> pid = <span class="fn">fork</span>();
+
+<span class="kw">if</span> (pid == <span class="num">0</span>) {
+    <span class="comment">// child process</span>
+    <span class="fn">printf</span>(<span class="str">"I am the child\n"</span>);
+} <span class="kw">else</span> {
+    <span class="comment">// parent process</span>
+    <span class="fn">printf</span>(<span class="str">"child PID = %d\n"</span>, pid);
+}
+            </div>
+
+            <br>
+
+            <button class="btn green" onclick="simulateFork()">
+                Simulate fork()
+            </button>
+
+            <div id="forkOutput"
+                 class="mono"
+                 style="margin-top:12px;color:var(--muted);font-size:12px">
+                Try the controls to simulate fork() → execve() → scheduling.
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h3>execve() — Load a New Program</h3>
+            <span class="badge">PROGRAM IMAGE</span>
+        </div>
+
+        <div class="card-body">
+
+            <p style="color:var(--muted);font-size:13px">
+                <code>execve()</code> replaces the current process image
+                with another executable. The PID normally stays the same,
+                but the program code, data, stack, and other memory mappings
+                are replaced.
+            </p>
+
+            <div class="code">
+<span class="fn">execve</span>(
+    <span class="str">"/bin/ls"</span>,
+    argv,
+    envp
+);
+
+<span class="comment">// PID remains the same</span>
+<span class="comment">// program image changes</span>
+            </div>
+
+            <br>
+
+            <button class="btn purple" onclick="simulateExec()">
+                Simulate execve()
+            </button>
+
+            <div id="execOutput"
+                 class="mono"
+                 style="margin-top:12px;color:var(--muted);font-size:12px">
+                The PID stays 4242 while the program image changes.
+            </div>
+        </div>
+    </div>
+
+</section>
+
+<br>
+
+<!-- SIGNALS -->
+<section class="card">
+    <div class="card-header">
+        <h3>Signals and Process Control</h3>
+        <span class="badge">kill(2)</span>
+    </div>
+
+    <div class="card-body">
+
+        <div class="signal-grid">
+
+            <div class="signal-card">
+                <strong>SIGSTOP</strong>
+                <span>
+                    Suspends the process. It cannot be caught or ignored.
+                </span>
+            </div>
+
+            <div class="signal-card">
+                <strong>SIGCONT</strong>
+                <span>
+                    Continues a stopped process so it can become runnable again.
+                </span>
+            </div>
+
+            <div class="signal-card">
+                <strong>SIGTERM</strong>
+                <span>
+                    Requests graceful termination. The process may handle it.
+                </span>
+            </div>
+
+            <div class="signal-card">
+                <strong>SIGKILL</strong>
+                <span>
+                    Forces termination. It cannot be caught or ignored.
+                </span>
+            </div>
+
+            <div class="signal-card">
+                <strong>SIGCHLD</strong>
+                <span>
+                    Sent to a parent when a child changes state, including exit.
+                </span>
+            </div>
+
+            <div class="signal-card">
+                <strong>waitpid()</strong>
+                <span>
+                    Lets a parent collect a child's exit status and reap it.
+                </span>
+            </div>
+
+        </div>
+
+    </div>
+</section>
+
+<br>
+
+<!-- TERMINAL -->
+<section class="card">
+    <div class="card-header">
+        <h3>Simulated Linux Terminal</h3>
+        <span class="badge green">bash</span>
+    </div>
+
+    <div class="card-body">
+
+        <div class="terminal">
+
+            <div class="terminal-head">
+                <span class="terminal-dot r"></span>
+                <span class="terminal-dot y"></span>
+                <span class="terminal-dot g"></span>
+            </div>
+
+            <div class="terminal-body" id="terminal">
+
+                <div>
+                    <span class="prompt">student@linux-lab:~$</span>
+                    <span class="command"> ps -ef</span>
+                </div>
+
+                <div class="output">
+root       1     0  0 08:00 ?        00:00:01 /sbin/init
+root     731     1  0 08:01 ?        00:00:00 sshd
+student 4100   731  0 08:10 pts/0    00:00:00 bash
+student 4242  4100  1 08:12 pts/0    00:00:02 ./process-demo
+                </div>
+
+                <br>
+
+                <div>
+                    <span class="prompt">student@linux-lab:~$</span>
+                    <span class="command"> ps -o pid,ppid,state,cmd -p 4242</span>
+                </div>
+
+                <div class="output" id="psOutput">
+PID    PPID S CMD<br>
+4242   4100 R ./process-demo
+                </div>
+
+                <br>
+
+                <div>
+                    <span class="prompt">student@linux-lab:~$</span>
+                    <span class="cursor"></span>
+                </div>
+
+            </div>
+        </div>
+
+        <div class="controls" style="margin-top:14px">
+            <button class="btn" onclick="terminalCommand('ps')">
+                ps
+            </button>
+
+            <button class="btn" onclick="terminalCommand('pstree')">
+                pstree
+            </button>
+
+            <button class="btn" onclick="terminalCommand('status')">
+                /proc/4242/status
+            </button>
+
+            <button class="btn" onclick="terminalCommand('maps')">
+                /proc/4242/maps
+            </button>
+
+            <button class="btn" onclick="terminalCommand('wait')">
+                waitpid()
+            </button>
+        </div>
+
+    </div>
+</section>
+
+<br>
+
+<!-- TABS -->
+<section class="card">
+
+    <div class="tabs">
+
+        <button class="tab active" onclick="showTab('memory', this)">
+            Memory
+        </button>
+
+        <button class="tab" onclick="showTab('scheduler', this)">
+            Scheduler
+        </button>
+
+        <button class="tab" onclick="showTab('syscalls', this)">
+            Syscalls
+        </button>
+
+        <button class="tab" onclick="showTab('inspector', this)">
+            PID Inspector
+        </button>
+
+        <button class="tab" onclick="showTab('linux', this)">
+            Real Linux
+        </button>
+
+    </div>
+
+    <!-- MEMORY -->
+    <div class="tab-content active" id="tab-memory">
+
+        <div class="card-body">
+
+            <h3 style="margin-top:0">Process Virtual Memory</h3>
+
+            <p style="color:var(--muted);font-size:13px">
+                A process sees a virtual address space. The kernel maps
+                virtual pages to physical memory or other backing storage.
+            </p>
+
+            <div class="memory-map">
+
+                <div class="memory-row">
+                    <div class="memory-label">STACK</div>
+                    <div class="memory-bar">
+                        <div class="memory-fill"
+                             style="width:28%;background:rgba(255,159,67,.3)">
+                            stack
+                        </div>
+                    </div>
+                    <div class="memory-size">8 MiB</div>
+                </div>
+
+                <div class="memory-row">
+                    <div class="memory-label">HEAP</div>
+                    <div class="memory-bar">
+                        <div class="memory-fill"
+                             style="width:44%;background:rgba(57,229,140,.25)">
+                            heap
+                        </div>
+                    </div>
+                    <div class="memory-size">18 MiB</div>
+                </div>
+
+                <div class="memory-row">
+                    <div class="memory-label">LIBRARIES</div>
+                    <div class="memory-bar">
+                        <div class="memory-fill"
+                             style="width:62%;background:rgba(66,217,255,.22)">
+                            shared libraries
+                        </div>
+                    </div>
+                    <div class="memory-size">42 MiB</div>
+                </div>
+
+                <div class="memory-row">
+                    <div class="memory-label">TEXT</div>
+                    <div class="memory-bar">
+                        <div class="memory-fill"
+                             style="width:21%;background:rgba(183,140,255,.25)">
+                            executable
+                        </div>
+                    </div>
+                    <div class="memory-size">4 MiB</div>
+                </div>
+
+                <div class="memory-row">
+                    <div class="memory-label">MMAP</div>
+                    <div class="memory-bar">
+                        <div class="memory-fill"
+                             style="width:36%;background:rgba(255,209,102,.23)">
+                            mappings
+                        </div>
+                    </div>
+                    <div class="memory-size">24 MiB</div>
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- SCHEDULER -->
+    <div class="tab-content" id="tab-scheduler">
+
+        <div class="card-body">
+
+            <h3 style="margin-top:0">CPU Scheduler</h3>
+
+            <p style="color:var(--muted);font-size:13px">
+                The scheduler selects runnable tasks and gives them CPU time.
+                A process that blocks waiting for I/O leaves the runnable
+                set until the relevant event occurs.
+            </p>
+
+            <div class="scheduler">
+
+                <div class="cpu">
+                    <div class="cpu-head">
+                        <strong>CPU 0</strong>
+                        <span>RUNNING</span>
+                    </div>
+                    <div class="cpu-track">
+                        <div class="cpu-fill"></div>
+                    </div>
+                </div>
+
+                <div class="cpu">
+                    <div class="cpu-head">
+                        <strong>CPU 1</strong>
+                        <span>RUNNING</span>
+                    </div>
+                    <div class="cpu-track">
+                        <div class="cpu-fill"></div>
+                    </div>
+                </div>
+
+                <div class="cpu">
+                    <div class="cpu-head">
+                        <strong>CPU 2</strong>
+                        <span id="cpu2State">READY</span>
+                    </div>
+                    <div class="cpu-track">
+                        <div class="cpu-fill"></div>
+                    </div>
+                </div>
+
+                <div class="cpu">
+                    <div class="cpu-head">
+                        <strong>CPU 3</strong>
+                        <span>IDLE</span>
+                    </div>
+                    <div class="cpu-track">
+                        <div class="cpu-fill"></div>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- SYSCALLS -->
+    <div class="tab-content" id="tab-syscalls">
+
+        <div class="card-body">
+
+            <h3 style="margin-top:0">System Call Trace</h3>
+
+            <div class="code" id="syscallTrace">
+<span class="comment"># simulated trace</span>
+
+<span class="fn">fork</span>()                     = <span class="num">4242</span>
+<span class="fn">execve</span>(<span class="str">"./process-demo"</span>, ...) = <span class="num">0</span>
+<span class="fn">clock_gettime</span>()            = <span class="num">0</span>
+<span class="fn">read</span>(<span class="num">0</span>, ...)               = <span class="num">12</span>
+<span class="fn">write</span>(<span class="num">1</span>, ...)              = <span class="num">12</span>
+<span class="fn">nanosleep</span>(...)              = <span class="num">0</span>
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- INSPECTOR -->
+    <div class="tab-content" id="tab-inspector">
+
+        <div class="card-body">
+
+            <h3 style="margin-top:0">PID Inspector</h3>
+
+            <div class="table-wrap">
+
+                <table>
+
+                    <thead>
+                        <tr>
+                            <th>PID</th>
+                            <th>PPID</th>
+                            <th>STATE</th>
+                            <th>CPU</th>
+                            <th>MEM</th>
+                            <th>CMD</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+
+                        <tr>
+                            <td>1</td>
+                            <td>0</td>
+                            <td class="state state-running">S</td>
+                            <td>0</td>
+                            <td>14M</td>
+                            <td>/sbin/init</td>
+                        </tr>
+
+                        <tr>
+                            <td>731</td>
+                            <td>1</td>
+                            <td class="state state-sleeping">S</td>
+                            <td>1</td>
+                            <td>8M</td>
+                            <td>sshd</td>
+                        </tr>
+
+                        <tr>
+                            <td>4100</td>
+                            <td>731</td>
+                            <td class="state state-running">R</td>
+                            <td>3</td>
+                            <td>6M</td>
+                            <td>bash</td>
+                        </tr>
+
+                        <tr id="inspectorRow">
+                            <td>4242</td>
+                            <td>4100</td>
+                            <td class="state state-ready" id="inspectorState">R</td>
+                            <td>2</td>
+                            <td>18M</td>
+                            <td>./process-demo</td>
+                        </tr>
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- REAL LINUX -->
+    <div class="tab-content" id="tab-linux">
+
+        <div class="card-body">
+
+            <h3 style="margin-top:0">Try It on Real Linux</h3>
+
+            <p style="color:var(--muted);font-size:13px">
+                The interactive lab above is simulated. These commands can
+                be used on an actual Linux machine to inspect real processes.
+            </p>
+
+            <div class="code">
+<span class="comment"># list processes</span>
+ps aux
+
+<span class="comment"># process tree</span>
+pstree -p
+
+<span class="comment"># inspect a process</span>
+cat /proc/&lt;PID&gt;/status
+
+<span class="comment"># inspect memory mappings</span>
+cat /proc/&lt;PID&gt;/maps
+
+<span class="comment"># send SIGSTOP</span>
+kill -STOP &lt;PID&gt;
+
+<span class="comment"># continue</span>
+kill -CONT &lt;PID&gt;
+
+<span class="comment"># terminate</span>
+kill -TERM &lt;PID&gt;
+
+<span class="comment"># inspect open files</span>
+ls -l /proc/&lt;PID&gt;/fd
+            </div>
+
+            <br>
+
+            <div class="explanation">
+                <h4>Important distinction</h4>
+                <p>
+                    A stopped process is still alive. A zombie process has
+                    already terminated but its parent has not collected its
+                    exit status. Reaping removes the zombie's remaining
+                    process-table entry.
+                </p>
+            </div>
+
+        </div>
+
+    </div>
+
+</section>
+
+<br>
+
+<!-- ZOMBIE EXPLANATION -->
+<section class="grid grid-3">
+
+    <div class="card">
+        <div class="card-header">
+            <h3>EXITED</h3>
+            <span class="badge red">TERMINATED</span>
+        </div>
+
+        <div class="card-body">
+            <p style="margin:0;color:var(--muted);font-size:12px">
+                The process has finished executing. Conceptually, this is
+                the point where the program's execution is over.
+            </p>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h3>ZOMBIE</h3>
+            <span class="badge red">WAITING FOR PARENT</span>
+        </div>
+
+        <div class="card-body">
+            <p style="margin:0;color:var(--muted);font-size:12px">
+                The child has exited, but the parent has not yet collected
+                the child's exit status using a wait-family system call.
+            </p>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h3>REAPED</h3>
+            <span class="badge green">CLEANED UP</span>
+        </div>
+
+        <div class="card-body">
+            <p style="margin:0;color:var(--muted);font-size:12px">
+                The parent calls <code>wait()</code> or <code>waitpid()</code>.
+                The exit status is collected and the zombie disappears.
+            </p>
+        </div>
+    </div>
+
+</section>
+
+<footer>
+    Linux Process Lab · Educational simulation · No real host processes are modified
+</footer>
+
+</main>
+
+<script>
+/* =========================================================
+   PROCESS STATE ENGINE
+   ========================================================= */
+
+const stateInfo = {
+    NEW: {
+        badge: "NEW",
+        detail: "N — New",
+        title: "NEW",
+        text: "The process is being created. In a real Linux system, process creation involves kernel bookkeeping before the new task becomes runnable."
+    },
+
+    FORK: {
+        badge: "FORK",
+        detail: "— fork()",
+        title: "FORK",
+        text: "The parent creates a child process. fork() returns the child's PID to the parent and 0 to the child."
+    },
+
+    EXEC: {
+        badge: "EXEC",
+        detail: "— execve()",
+        title: "EXEC",
+        text: "execve() replaces the current process image with a new program. The PID normally remains unchanged."
+    },
+
+    READY: {
+        badge: "READY",
+        detail: "R — Runnable",
+        title: "READY",
+        text: "The process is runnable and eligible for CPU time, but another task may currently be using the CPU."
+    },
+
+    RUNNING: {
+        badge: "RUNNING",
+        detail: "R — Running",
+        title: "RUNNING",
+        text: "The scheduler has dispatched this process to a CPU. It is currently executing in this simulation."
+    },
+
+    SLEEPING: {
+        badge: "SLEEPING",
+        detail: "S — Sleeping",
+        title: "SLEEPING",
+        text: "The process is waiting for an event such as I/O, a timer, a lock, or another kernel event before it can continue."
+    },
+
+    STOPPED: {
+        badge: "STOPPED",
+        detail: "T — Stopped",
+        title: "STOPPED",
+        text: "The process is alive but has been stopped, for example by SIGSTOP. SIGCONT can make it runnable again."
+    },
+
+    EXITED: {
+        badge: "EXITED",
+        detail: "X — Exited",
+        title: "EXITED",
+        text: "The process has completed execution. Its parent may still need to collect its exit status."
+    },
+
+    ZOMBIE: {
+        badge: "ZOMBIE",
+        detail: "Z — Zombie",
+        title: "ZOMBIE",
+        text: "The process has terminated, but its parent has not yet collected its exit status with wait() or waitpid()."
+    },
+
+    REAPED: {
+        badge: "REAPED",
+        detail: "— Reaped",
+        title: "REAPED",
+        text: "The parent has collected the child's exit status. The zombie's remaining process-table state is cleaned up."
+    }
+};
+
+let currentState = "READY";
+let previousState = "READY";
+
+/*
+ * The process does not start automatically.
+ * This becomes true only after the user presses Start.
+ */
+let processStarted = false;
+
+/*
+ * Used to invalidate an older startup sequence if the user
+ * interrupts the process before it reaches RUNNING.
+ */
+let processRunId = 0;
+
+function setState(state) {
+
+    previousState = currentState;
+    currentState = state;
+
+    const visual = document.getElementById("processVisual");
+    const core = document.getElementById("processCore");
+    const badge = document.getElementById("stateBadge");
+    const orbit = document.getElementById("processOrbit");
+
+    visual.className = "process-visual";
+
+    if (state === "RUNNING") {
+        visual.classList.add("running");
+    }
+
+    if (state === "SLEEPING") {
+        visual.classList.add("sleeping");
+    }
+
+    if (state === "READY") {
+        visual.classList.add("ready");
+    }
+
+    if (state === "STOPPED") {
+        visual.classList.add("stopped");
+    }
+
+    if (state === "FORK") {
+        visual.classList.add("fork");
+    }
+
+    if (state === "EXEC") {
+        visual.classList.add("exec");
+    }
+
+    if (state === "ZOMBIE") {
+        visual.classList.add("zombie");
+    }
+
+    if (state === "EXITED") {
+        visual.classList.add("exited");
+    }
+
+    if (state === "REAPED") {
+        visual.classList.add("reaped");
+    }
+
+    /*
+     * Once Start has been pressed:
+     *
+     * READY / RUNNING:
+     * rotate normally.
+     *
+     * SLEEPING:
+     * rotate slowly using the existing 16 second animation.
+     *
+     * NEW / FORK / EXEC:
+     * remain stationary while the process is being created/loaded.
+     */
+    if (
+        processStarted &&
+        (
+            state === "READY" ||
+            state === "RUNNING" ||
+            state === "SLEEPING"
+        )
+    ) {
+        orbit.classList.add("active");
+    }
+
+    /*
+     * These states explicitly stop the process visual.
+     */
+    if (
+        state === "NEW" ||
+        state === "FORK" ||
+        state === "EXEC" ||
+        state === "STOPPED" ||
+        state === "EXITED" ||
+        state === "ZOMBIE" ||
+        state === "REAPED"
+    ) {
+        orbit.classList.remove("active");
+    }
+
+    core.textContent = state;
+    badge.textContent = stateInfo[state].badge;
+
+    updateDetails(state);
+    updateLifecycle(state);
+    updateTerminal(state);
+}
+
+/* =========================================================
+   MANUAL START
+   ========================================================= */
+
+function runProcess() {
+
+    /*
+     * If already running through the lifecycle, don't create
+     * another startup sequence on top of the existing one.
+     */
+    if (
+        processStarted &&
+        currentState !== "EXITED" &&
+        currentState !== "ZOMBIE" &&
+        currentState !== "REAPED"
+    ) {
+        return;
+    }
+
+    processStarted = true;
+
+    /*
+     * Every Start gets its own sequence ID.
+     * This prevents old timers from taking control after
+     * the user has interrupted or restarted the process.
+     */
+    const runId = ++processRunId;
+
+    setState("NEW");
+
+    addTerminalLine(
+        "./process-demo",
+        "[simulated] creating process 4242"
+    );
+
+    setTimeout(() => {
+
+        if (
+            runId === processRunId &&
+            currentState === "NEW"
+        ) {
+            setState("FORK");
+
+            addTerminalLine(
+                "fork()",
+                "[simulated] child created with PID 4242"
+            );
+        }
+
+    }, 900);
+
+    setTimeout(() => {
+
+        if (
+            runId === processRunId &&
+            currentState === "FORK"
+        ) {
+            setState("EXEC");
+
+            addTerminalLine(
+                "execve(\"./process-demo\", ...)",
+                "[simulated] process image loaded"
+            );
+        }
+
+    }, 1800);
+
+    setTimeout(() => {
+
+        if (
+            runId === processRunId &&
+            currentState === "EXEC"
+        ) {
+            setState("READY");
+
+            document.getElementById("forkOutput").textContent =
+                "child PID 4242 is now runnable";
+
+            document.getElementById("execOutput").textContent =
+                "execve(\"./process-demo\", argv, envp) → PID 4242";
+        }
+
+    }, 2800);
+
+    setTimeout(() => {
+
+        if (
+            runId === processRunId &&
+            currentState === "READY"
+        ) {
+            setState("RUNNING");
+
+            addTerminalLine(
+                "schedule()",
+                "[simulated] process 4242 dispatched to CPU 2"
+            );
+        }
+
+    }, 3800);
+}
+
+/* =========================================================
+   PROCESS DETAILS
+   ========================================================= */
+
+function updateDetails(state) {
+
+    const info = stateInfo[state];
+
+    document.getElementById("detailState").textContent =
+        info.detail;
+
+    document.getElementById("explanationTitle").textContent =
+        info.title;
+
+    document.getElementById("explanationText").textContent =
+        info.text;
+
+    const inspectorState =
+        document.getElementById("inspectorState");
+
+    if (state === "RUNNING") {
+        inspectorState.textContent = "R";
+        inspectorState.className = "state state-running";
+    }
+
+    else if (state === "READY") {
+        inspectorState.textContent = "R";
+        inspectorState.className = "state state-ready";
+    }
+
+    else if (state === "SLEEPING") {
+        inspectorState.textContent = "S";
+        inspectorState.className = "state state-sleeping";
+    }
+
+    else if (state === "STOPPED") {
+        inspectorState.textContent = "T";
+        inspectorState.className = "state state-stopped";
+    }
+
+    else if (state === "ZOMBIE") {
+        inspectorState.textContent = "Z";
+        inspectorState.className = "state state-zombie";
+    }
+
+    else {
+        inspectorState.textContent = "-";
+        inspectorState.className = "state";
+    }
+
+    document.getElementById("cpu2State").textContent =
+        state === "RUNNING" ? "PID 4242" : state;
+}
+
+function updateLifecycle(state) {
+
+    document
+        .querySelectorAll(".lifecycle-node")
+        .forEach(node => {
+
+            node.classList.remove("active");
+
+            if (node.dataset.state === state) {
+                node.classList.add("active");
+            }
+        });
+
+    const note = document.getElementById("lifecycleNote");
+
+    const notes = {
+
+        NEW:
+            "The process is being created. The kernel prepares the task before it becomes runnable.",
+
+        FORK:
+            "fork() creates a child process. The child gets a new PID while inheriting much of the parent's process context.",
+
+        EXEC:
+            "execve() replaces the process image with a new program. The PID normally stays the same.",
+
+        READY:
+            "The process is runnable. It is waiting for the scheduler to give it CPU time.",
+
+        RUNNING:
+            "The process is executing on a CPU. A scheduler may later preempt it and return it to the runnable state.",
+
+        SLEEPING:
+            "The process is blocked waiting for an event such as I/O, a timer, a lock, or another kernel event.",
+
+        STOPPED:
+            "SIGSTOP has suspended the process. SIGCONT can move it back toward the runnable state.",
+
+        EXITED:
+            "The program has terminated. The parent may still need to collect its exit status.",
+
+        ZOMBIE:
+            "The process has exited but remains represented as a zombie because its parent has not yet called wait() or waitpid().",
+
+        REAPED:
+            "The parent has collected the exit status. The zombie has been cleaned up."
+    };
+
+    note.textContent = notes[state];
+}
+
+/* =========================================================
+   SIGNAL CONTROLS
+   ========================================================= */
+
+function stopProcess() {
+
+    if (
+        currentState === "NEW" ||
+        currentState === "FORK" ||
+        currentState === "EXEC" ||
+        currentState === "RUNNING" ||
+        currentState === "READY" ||
+        currentState === "SLEEPING"
+    ) {
+
+        /*
+         * Invalidate any pending automatic startup steps.
+         */
+        processRunId++;
+
+        setState("STOPPED");
+
+        addTerminalLine(
+            "kill -STOP 4242",
+            "[simulated] process 4242 stopped"
+        );
+    }
+}
+
+function continueProcess() {
+
+    if (currentState === "STOPPED") {
+
+        setState("READY");
+
+        addTerminalLine(
+            "kill -CONT 4242",
+            "[simulated] process 4242 continued"
+        );
+
+        setTimeout(() => {
+
+            if (currentState === "READY") {
+                setState("RUNNING");
+            }
+
+        }, 900);
+    }
+}
+
+function exitProcess() {
+
+    if (
+        currentState !== "ZOMBIE" &&
+        currentState !== "REAPED"
+    ) {
+
+        /*
+         * Interrupt any pending startup sequence.
+         */
+        processRunId++;
+
+        setState("EXITED");
+
+        addTerminalLine(
+            "exit(0)",
+            "[simulated] process 4242 exited"
+        );
+
+        setTimeout(() => {
+
+            if (currentState === "EXITED") {
+
+                setState("ZOMBIE");
+
+                addTerminalLine(
+                    "ps -o pid,state -p 4242",
+                    "4242    Z    [process-demo]"
+                );
+            }
+
+        }, 1300);
+    }
+}
+
+function makeZombie() {
+
+    if (
+        currentState === "NEW" ||
+        currentState === "FORK" ||
+        currentState === "EXEC" ||
+        currentState === "READY" ||
+        currentState === "RUNNING" ||
+        currentState === "SLEEPING" ||
+        currentState === "STOPPED" ||
+        currentState === "EXITED"
+    ) {
+
+        /*
+         * Interrupt any pending automatic startup sequence.
+         */
+        processRunId++;
+
+        setState("ZOMBIE");
+
+        addTerminalLine(
+            "ps -o pid,state -p 4242",
+            "4242    Z    [process-demo]"
+        );
+    }
+}
+
+function reapProcess() {
+
+    if (currentState === "ZOMBIE") {
+
+        addTerminalLine(
+            "waitpid(4242, ...)",
+            "[simulated] collected exit status 0"
+        );
+
+        setState("REAPED");
+    }
+}
+
+/* =========================================================
+   FORK / EXEC
+   ========================================================= */
+
+function simulateFork() {
+
+    /*
+     * Manual fork simulation also interrupts the automatic
+     * startup sequence so the user can explore this state.
+     */
+    processRunId++;
+    processStarted = true;
+
+    setState("FORK");
+
+    document.getElementById("forkOutput").innerHTML =
+        "parent PID 4100 → fork() → child PID <span style='color:var(--green)'>4242</span>";
+
+    addTerminalLine(
+        "fork()",
+        "[simulated] child created with PID 4242"
+    );
+
+    setTimeout(() => {
+
+        if (currentState === "FORK") {
+            setState("EXEC");
+        }
+
+    }, 1100);
+
+    setTimeout(() => {
+
+        if (currentState === "EXEC") {
+
+            document.getElementById("forkOutput").textContent =
+                "child PID 4242 is now executing its program";
+        }
+
+    }, 1900);
+}
+
+function simulateExec() {
+
+    /*
+     * Manual exec simulation interrupts the automatic
+     * startup sequence.
+     */
+    processRunId++;
+    processStarted = true;
+
+    setState("EXEC");
+
+    document.getElementById("execOutput").textContent =
+        "execve(\"./process-demo\", argv, envp) → PID 4242";
+
+    addTerminalLine(
+        "execve(\"./process-demo\", ...)",
+        "[simulated] process image replaced"
+    );
+
+    setTimeout(() => {
+
+        if (currentState === "EXEC") {
+            setState("READY");
+        }
+
+    }, 1000);
+
+    setTimeout(() => {
+
+        if (currentState === "READY") {
+            setState("RUNNING");
+        }
+
+    }, 1900);
+}
+
+/* =========================================================
+   TERMINAL
+   ========================================================= */
+
+function addTerminalLine(command, output) {
+
+    const terminal =
+        document.getElementById("terminal");
+
+    const line = document.createElement("div");
+
+    line.innerHTML =
+        `<span class="prompt">student@linux-lab:~$</span> ` +
+        `<span class="command">${escapeHtml(command)}</span>`;
+
+    terminal.appendChild(line);
+
+    const out = document.createElement("div");
+
+    out.className = "output";
+    out.textContent = output;
+
+    terminal.appendChild(out);
+
+    terminal.scrollTop = terminal.scrollHeight;
+}
+
+function terminalCommand(command) {
+
+    if (command === "ps") {
+
+        addTerminalLine(
+            "ps",
+            "PID   PPID S CMD\n4100   731 R bash\n4242  4100 " +
+            getLinuxState(currentState) +
+            " ./process-demo"
+        );
+
+    }
+
+    else if (command === "pstree") {
+
+        addTerminalLine(
+            "pstree",
+            "init(1)---sshd(731)---bash(4100)---process-demo(4242)"
+        );
+
+    }
+
+    else if (command === "status") {
+
+        addTerminalLine(
+            "cat /proc/4242/status",
+            "Name: process-demo\nPid: 4242\nPPid: 4100\nState: " +
+            getLinuxState(currentState)
+        );
+
+    }
+
+    else if (command === "maps") {
+
+        addTerminalLine(
+            "cat /proc/4242/maps",
+            "00400000-00405000 r-xp ./process-demo\n" +
+            "00604000-00605000 rw-p ./process-demo\n" +
+            "7f000000-7f020000 rw-p [heap]\n" +
+            "7ffffffde000-7ffffffff000 rw-p [stack]"
+        );
+
+    }
+
+    else if (command === "wait") {
+
+        if (currentState === "ZOMBIE") {
+            reapProcess();
+        }
+
+        else {
+
+            addTerminalLine(
+                "waitpid(4242, ...)",
+                "4242 is not currently a zombie child"
+            );
+        }
+    }
+}
+
+function getLinuxState(state) {
+
+    const states = {
+        NEW: "N",
+        FORK: "R",
+        EXEC: "R",
+        READY: "R",
+        RUNNING: "R",
+        SLEEPING: "S",
+        STOPPED: "T",
+        EXITED: "X",
+        ZOMBIE: "Z",
+        REAPED: "-"
+    };
+
+    return states[state] || "?";
+}
+
+function updateTerminal(state) {
+
+    const output =
+        document.getElementById("psOutput");
+
+    output.innerHTML =
+        `PID    PPID S CMD<br>` +
+        `4242   4100 ${getLinuxState(state)} ./process-demo`;
+}
+
+function escapeHtml(value) {
+
+    return value
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+}
+
+/* =========================================================
+   TABS
+   ========================================================= */
+
+function showTab(name, button) {
+
+    document
+        .querySelectorAll(".tab-content")
+        .forEach(tab => {
+            tab.classList.remove("active");
+        });
+
+    document
+        .querySelectorAll(".tab")
+        .forEach(tab => {
+            tab.classList.remove("active");
+        });
+
+    document
+        .getElementById("tab-" + name)
+        .classList.add("active");
+
+    button.classList.add("active");
+}
+
+/* =========================================================
+   INITIAL STATE
+   ========================================================= */
+
+/*
+ * No startup animation.
+ *
+ * The page opens in READY state and the orbit is stationary.
+ * The user must press "Start" to begin:
+ *
+ * START
+ *   ↓
+ * NEW
+ *   ↓
+ * FORK
+ *   ↓
+ * EXEC
+ *   ↓
+ * READY
+ *   ↓
+ * RUNNING
+ *
+ * The user can interrupt the sequence at any point using
+ * the process controls.
+ */
+
+setState("READY");
+
+document.getElementById("processOrbit").classList.remove("active");
+
+</script>
+
+</body>
+</html>
